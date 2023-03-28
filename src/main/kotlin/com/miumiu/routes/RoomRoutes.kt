@@ -3,6 +3,7 @@ package com.miumiu.routes
 import com.miumiu.data.Room
 import com.miumiu.data.models.BasicApiResponse
 import com.miumiu.data.models.CreateRoomRequest
+import com.miumiu.data.models.RoomResponse
 import com.miumiu.other.Constants.MAX_ROOM_SIZE
 import com.miumiu.server
 import io.ktor.http.*
@@ -48,6 +49,27 @@ fun Route.createRoomRoute() {
             println("Room created: ${roomRequest.name}")
 
             call.respond(HttpStatusCode.OK, BasicApiResponse(true))
+        }
+    }
+}
+
+fun Route.getRoomRoute() {
+    route("/api/getRooms") {
+        get {
+            val searchQuery = call.parameters["searchQuery"]
+            if (searchQuery == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@get
+            }
+
+            val roomsResult = server.rooms.filterKeys {
+                it.contains(searchQuery, ignoreCase = true)
+            }
+            val roomResponses = roomsResult.values.map {
+                RoomResponse(it.name, it.maxPlayers, it.players.size)
+            }.sortedBy { it.name }
+
+            call.respond(HttpStatusCode.OK, roomResponses)
         }
     }
 }
