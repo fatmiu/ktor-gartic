@@ -1,5 +1,7 @@
 package com.miumiu.data
 
+import com.miumiu.data.models.Announcement
+import com.miumiu.gson
 import io.ktor.websocket.*
 import kotlinx.coroutines.isActive
 
@@ -34,6 +36,30 @@ class Room(
                 Phase.SHOW_WORD -> showWord()
             }
         }
+    }
+
+    suspend fun addPlayer(clientId: String, username: String, socket: WebSocketSession): Player {
+        val player = Player(username, socket, clientId)
+        players = players + player
+
+        if (players.size == 1) {
+            phase = Phase.WAITING_FOR_PLAYERS
+        } else if (players.size == 2 && phase == Phase.WAITING_FOR_PLAYERS) {
+            phase = Phase.WAITING_FOR_START
+            players = players.shuffled()
+        } else if (phase == Phase.WAITING_FOR_START && players.size == maxPlayers) {
+            phase = Phase.NEW_ROUND
+            players = players.shuffled()
+        }
+
+        val announcement = Announcement(
+            "$username joined the party!",
+            System.currentTimeMillis(),
+            Announcement.TYPE_PLAYER_JOINED
+        )
+        broadcast(gson.toJson(announcement))
+
+        return player
     }
 
     suspend fun broadcast(message: String) {
