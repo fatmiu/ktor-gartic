@@ -1,16 +1,40 @@
 package com.miumiu.routes
 
 import com.google.gson.JsonParser
+import com.miumiu.data.Room
 import com.miumiu.data.models.BaseModel
 import com.miumiu.data.models.ChatMessage
+import com.miumiu.data.models.DrawData
 import com.miumiu.gson
 import com.miumiu.other.Constants.TYPE_CHAT_MESSAGE
+import com.miumiu.other.Constants.TYPE_DRAW_DATA
+import com.miumiu.server
 import com.miumiu.session.DrawingSession
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
+
+
+fun Route.gameWebSocketRoute() {
+    route("/ws/draw") {
+        standardWebSocket { socket, clientId, message, payload ->
+            when (payload) {
+                is DrawData -> {
+                    val room = server.rooms[payload.roomName] ?: return@standardWebSocket
+                    if (room.phase == Room.Phase.GAME_RUNNING) {
+                        room.broadcastToAllExcept(message, clientId)
+                    }
+                }
+
+                is ChatMessage -> {
+
+                }
+            }
+        }
+    }
+}
 
 fun Route.standardWebSocket(
     handleFrame: suspend (
@@ -33,6 +57,7 @@ fun Route.standardWebSocket(
                     val jsonObject = JsonParser.parseString(message).asJsonObject
                     val type = when (jsonObject.get("type").asString) {
                         TYPE_CHAT_MESSAGE -> ChatMessage::class.java
+                        TYPE_DRAW_DATA -> DrawData::class.java
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)
