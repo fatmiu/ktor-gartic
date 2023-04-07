@@ -4,8 +4,11 @@ package com.miumiu.data
 
 import com.miumiu.data.models.Announcement
 import com.miumiu.data.models.ChosenWord
+import com.miumiu.data.models.GameState
 import com.miumiu.data.models.PhaseChange
 import com.miumiu.gson
+import com.miumiu.other.transformToUnderscores
+import com.miumiu.other.words
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 
@@ -17,8 +20,9 @@ class Room(
 
     private var timerJob: Job? = null
     private var drawingPlayer: Player? = null
-    private var winningPlayer = listOf<String>()
+    private var winningPlayers = listOf<String>()
     private var word: String? = null
+    private var curWords: List<String>? = null
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
     var phase = Phase.WAITING_FOR_PLAYERS
@@ -148,12 +152,34 @@ class Room(
     }
 
     private fun gameRunning() {
+        winningPlayers = listOf()
+        val wordToSend = word ?: curWords?.random() ?: words.random()
+        val wordWithUnderscores = wordToSend.transformToUnderscores()
+        val drawingUsername = (drawingPlayer ?: players.random()).username
+        val gameStateForDrawingPlayer = GameState(
+            drawingUsername,
+            wordToSend
+        )
+        val gameStateForGuessingPlayer = GameState(
+            drawingUsername,
+            wordWithUnderscores
+        )
+        GlobalScope.launch {
+            broadcastToAllExcept(
+                gson.toJson(gameStateForGuessingPlayer),
+                drawingPlayer?.clientId ?: players.random().clientId
+            )
+            drawingPlayer?.socket?.send(Frame.Text(gson.toJson(gameStateForDrawingPlayer)))
+        }
 
+        timeAndNotify(DELAY_GAME_RUNNING_TO_SHOW_WORD)
+
+        println("Drawing phase in room $name started. It'll last ${DELAY_GAME_RUNNING_TO_SHOW_WORD / 1000}s")
     }
 
     private fun showWord() {
         GlobalScope.launch {
-            if (winningPlayer.isEmpty()) {
+            if (winningPlayers.isEmpty()) {
                 drawingPlayer?.let {
                     it.score -= PENALTY_NOBODY_GUESSED_IT
                 }
