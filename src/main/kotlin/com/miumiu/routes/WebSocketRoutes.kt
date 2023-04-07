@@ -7,6 +7,7 @@ import com.miumiu.data.models.*
 import com.miumiu.gson
 import com.miumiu.other.Constants.TYPE_ANNOUNCEMENT
 import com.miumiu.other.Constants.TYPE_CHAT_MESSAGE
+import com.miumiu.other.Constants.TYPE_CHOSEN_WORD
 import com.miumiu.other.Constants.TYPE_DRAW_DATA
 import com.miumiu.other.Constants.TYPE_JOIN_ROOM_HANDSHAKE
 import com.miumiu.other.Constants.TYPE_PHASE_CHANGE
@@ -49,6 +50,11 @@ fun Route.gameWebSocketRoute() {
                     }
                 }
 
+                is ChosenWord -> {
+                    val room = server.rooms[payload.roomName] ?: return@standardWebSocket
+                    room.setWordAndSwitchToGameRunning(payload.chosenWord)
+                }
+
                 is ChatMessage -> {
 
                 }
@@ -82,6 +88,7 @@ fun Route.standardWebSocket(
                         TYPE_ANNOUNCEMENT -> Announcement::class.java
                         TYPE_JOIN_ROOM_HANDSHAKE -> JoinRoomHandshake::class.java
                         TYPE_PHASE_CHANGE -> PhaseChange::class.java
+                        TYPE_CHOSEN_WORD -> ChosenWord::class.java
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)

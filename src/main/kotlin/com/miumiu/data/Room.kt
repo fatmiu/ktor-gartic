@@ -1,6 +1,9 @@
+@file:OptIn(DelicateCoroutinesApi::class)
+
 package com.miumiu.data
 
 import com.miumiu.data.models.Announcement
+import com.miumiu.data.models.ChosenWord
 import com.miumiu.data.models.PhaseChange
 import com.miumiu.gson
 import io.ktor.websocket.*
@@ -14,6 +17,8 @@ class Room(
 
     private var timerJob: Job? = null
     private var drawingPlayer: Player? = null
+    private var winningPlayer = listOf<String>()
+    private var word: String? = null
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
     var phase = Phase.WAITING_FOR_PLAYERS
@@ -75,14 +80,14 @@ class Room(
                 drawingPlayer?.username
             )
             repeat((ms / UPDATE_TIME_FREQUENCY).toInt()) {
-                if(it != 0) {
+                if (it != 0) {
                     phaseChange.phase = null
                 }
                 broadcast(gson.toJson(phaseChange))
                 phaseChange.time -= UPDATE_TIME_FREQUENCY
                 delay(UPDATE_TIME_FREQUENCY)
             }
-            phase = when(phase) {
+            phase = when (phase) {
                 Phase.WAITING_FOR_START -> Phase.NEW_ROUND
                 Phase.NEW_ROUND -> Phase.GAME_RUNNING
                 Phase.GAME_RUNNING -> Phase.SHOW_WORD
@@ -110,6 +115,11 @@ class Room(
 
     fun containsPlayer(username: String): Boolean {
         return players.find { it.username == username } != null
+    }
+
+    fun setWordAndSwitchToGameRunning(word: String) {
+        this.word = word
+        phase = Phase.GAME_RUNNING
     }
 
     private fun waitingForPlayers() {
@@ -142,7 +152,20 @@ class Room(
     }
 
     private fun showWord() {
-
+        GlobalScope.launch {
+            if (winningPlayer.isEmpty()) {
+                drawingPlayer?.let {
+                    it.score -= PENALTY_NOBODY_GUESSED_IT
+                }
+            }
+            word?.let {
+                val chosenWord = ChosenWord(it, name)
+                broadcast(gson.toJson(chosenWord))
+            }
+            timeAndNotify(DELAY_SHOW_WORD_TO_NEW_ROUND)
+            val phaseChange = PhaseChange(Phase.SHOW_WORD, DELAY_SHOW_WORD_TO_NEW_ROUND)
+            broadcast(gson.toJson(phaseChange))
+        }
     }
 
 
@@ -162,6 +185,8 @@ class Room(
         const val DELAY_NEW_ROUND_TO_GAME_RUNNING = 20000L
         const val DELAY_GAME_RUNNING_TO_SHOW_WORD = 60000L
         const val DELAY_SHOW_WORD_TO_NEW_ROUND = 10000L
+
+        const val PENALTY_NOBODY_GUESSED_IT = 50
     }
 
 }
