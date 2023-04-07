@@ -1,6 +1,13 @@
+@file:OptIn(DelicateCoroutinesApi::class)
+
 package com.miumiu.data
 
+import com.miumiu.data.models.Ping
+import com.miumiu.gson
+import com.miumiu.other.Constants.PING_FREQUENCY
+import com.miumiu.server
 import io.ktor.websocket.*
+import kotlinx.coroutines.*
 
 data class Player(
     val username: String,
@@ -9,4 +16,41 @@ data class Player(
     var isDrawing: Boolean = false,
     var score: Int = 0,
     var rank: Int = 0
-)
+) {
+    private var pingJob: Job? = null
+
+    private var pingTime = 0L
+    private var pongTime = 0L
+
+    var isOnline = true
+
+    fun startPinging() {
+        pingJob?.cancel()
+        pingJob = GlobalScope.launch {
+            while (true) {
+                sendPing()
+                delay(PING_FREQUENCY)
+            }
+        }
+    }
+
+    private suspend fun sendPing() {
+        pingTime = System.currentTimeMillis()
+        socket.send(Frame.Text(gson.toJson(Ping())))
+        delay(PING_FREQUENCY)
+        if (pingTime - pongTime > PING_FREQUENCY) {
+            isOnline = false
+            server.playerLeft(clientId)
+            pingJob?.cancel()
+        }
+    }
+
+    fun receivedPong() {
+        pongTime = System.currentTimeMillis()
+        isOnline = true
+    }
+
+    fun disconnect() {
+        pingJob?.cancel()
+    }
+}
