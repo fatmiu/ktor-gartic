@@ -9,6 +9,7 @@ import com.miumiu.other.Constants.TYPE_ANNOUNCEMENT
 import com.miumiu.other.Constants.TYPE_CHAT_MESSAGE
 import com.miumiu.other.Constants.TYPE_DRAW_DATA
 import com.miumiu.other.Constants.TYPE_JOIN_ROOM_HANDSHAKE
+import com.miumiu.other.Constants.TYPE_PHASE_CHANGE
 import com.miumiu.server
 import com.miumiu.session.DrawingSession
 import io.ktor.server.routing.*
@@ -80,6 +81,7 @@ fun Route.standardWebSocket(
                         TYPE_DRAW_DATA -> DrawData::class.java
                         TYPE_ANNOUNCEMENT -> Announcement::class.java
                         TYPE_JOIN_ROOM_HANDSHAKE -> JoinRoomHandshake::class.java
+                        TYPE_PHASE_CHANGE -> PhaseChange::class.java
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)
