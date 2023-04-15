@@ -2,7 +2,7 @@ package com.miumiu.other
 
 import java.io.File
 
-val words = readWordList("resources/programmers_wordlist.txt")
+val words = readWordList("src/main/resources/programmers_wordlist.txt")
 fun readWordList(fileName: String): List<String> {
     val inputStream = File(fileName).inputStream()
     val words = mutableListOf<String>()
@@ -31,4 +31,4 @@ fun getRandomWords(amount: Int): List<String> {
 fun String.transformToUnderscores() =
     toCharArray().map {
         if (it != ' ') '_' else ' '
-    }.joinToString { " " }
+    }.joinToString(separator = " ")
