@@ -9,7 +9,7 @@ import com.miumiu.plugins.*
 val server = DrawingServer()
 val gson = Gson()
 fun main() {
-    embeddedServer(Netty, port = 8001, host = "0.0.0.0", module = Application::module)
+    embeddedServer(Netty, port = System.getenv("PORT").toInt(), module = Application::module)
         .start(wait = true)
 }
 

@@ -15,7 +15,7 @@ import io.ktor.server.routing.*
 fun Route.createRoomRoute() {
     route("/api/createRoom") {
         post {
-            val roomRequest = call.receiveOrNull<CreateRoomRequest>()
+            val roomRequest = kotlin.runCatching { call.receiveNullable<CreateRoomRequest>() }.getOrNull()
             if (roomRequest == null) {
                 call.respond(HttpStatusCode.BadRequest)
                 return@post

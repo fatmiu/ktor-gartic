@@ -1,0 +1,1 @@
+web: java -jar build/libs/com.miumiu.ktor-gartic-all.jar
